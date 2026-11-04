@@ -3,6 +3,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+const { startRecipeSync } = require('./recipeSync');
 
 const app = express();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -40,7 +41,7 @@ app.post('/api/match', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT c.id, c.name, c.instructions, c.glassware, c.image_url,
+      `SELECT c.id, c.name, c.instructions, c.glassware, c.image_url, c.source_url,
               COUNT(ci.ingredient_id)::int AS total_required,
               COUNT(ci.ingredient_id)::int AS matched_count,
               json_agg(json_build_object(
@@ -70,6 +71,7 @@ if (require.main === module) {
   } else {
     app.listen(PORT, () => {
       console.log(`Bartender Aid API listening on port ${PORT}`);
+      startRecipeSync(pool);
     });
   }
 }

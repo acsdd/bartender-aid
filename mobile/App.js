@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -220,6 +221,14 @@ export default function App() {
                   </View>
                 )}
                 <Text style={styles.instructions}>{cocktail.instructions}</Text>
+                {cocktail.source_url ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => Linking.openURL(cocktail.source_url).catch(() => {})}
+                  >
+                    <Text style={styles.sourceAttribution}>Recipe data: TheCocktailDB</Text>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
             );
@@ -277,4 +286,5 @@ const styles = StyleSheet.create({
   ingredientAmount: { color: colors.citrus, fontSize: 12, fontWeight: '800', minWidth: 64 },
   ingredientName: { color: colors.ink, flex: 1, fontSize: 13 },
   instructions: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 12 },
+  sourceAttribution: { color: colors.citrus, fontSize: 12, marginTop: 10, textDecorationLine: 'underline' },
 });

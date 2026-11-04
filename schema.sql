@@ -11,7 +11,20 @@ CREATE TABLE IF NOT EXISTS cocktails (
     name VARCHAR(150) UNIQUE NOT NULL,
     instructions TEXT NOT NULL,
     glassware VARCHAR(50),
-    image_url TEXT
+    image_url TEXT,
+    source_id VARCHAR(32),
+    source_url TEXT
+);
+
+ALTER TABLE cocktails ADD COLUMN IF NOT EXISTS source_id VARCHAR(32);
+ALTER TABLE cocktails ADD COLUMN IF NOT EXISTS source_url TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS cocktails_source_id_unique_idx
+    ON cocktails (source_id) WHERE source_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS recipe_sync_state (
+    id SMALLINT PRIMARY KEY CHECK (id = 1),
+    last_attempt_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS cocktail_ingredients (
