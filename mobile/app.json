@@ -2,12 +2,18 @@
   "expo": {
     "name": "Bartender Aid",
     "slug": "bartender-aid",
+    "owner": "bar.app",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
     },
-    "android": {}
+    "android": {},
+    "extra": {
+      "eas": {
+        "projectId": "3c7c37f0-af6c-4eb1-9a82-268f770b7b3e"
+      }
+    }
   }
 }
