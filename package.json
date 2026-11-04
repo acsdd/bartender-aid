@@ -1,0 +1,9 @@
+{
+  "name": "bartender-aid-deployment",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm ci --prefix backend",
+    "start": "npm --prefix backend start"
+  }
+}
