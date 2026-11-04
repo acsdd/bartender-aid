@@ -1,0 +1,5 @@
+.accounts
+.env
+backend/.env
+node_modules/
+mobile/.expo/

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Bartender Aid",
+    "slug": "bartender-aid",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {}
+  }
+}
