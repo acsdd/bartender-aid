@@ -3,12 +3,14 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +35,8 @@ export default function App() {
   const [ingredients, setIngredients] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [cocktails, setCocktails] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCocktail, setSelectedCocktail] = useState(null);
   const [fetchingIngredients, setFetchingIngredients] = useState(true);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [ingredientError, setIngredientError] = useState('');
@@ -86,7 +90,13 @@ export default function App() {
     }
   };
 
-  const groupedIngredients = ingredients.reduce((groups, ingredient) => {
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredIngredients = ingredients.filter((ingredient) => (
+    ingredient.name.toLowerCase().includes(normalizedSearch)
+    || (ingredient.category || '').toLowerCase().includes(normalizedSearch)
+  ));
+
+  const groupedIngredients = filteredIngredients.reduce((groups, ingredient) => {
     const category = ingredient.category || 'Other';
     if (!groups[category]) groups[category] = [];
     groups[category].push(ingredient);
@@ -131,29 +141,45 @@ export default function App() {
             <Text style={styles.stateText}>No ingredients are available yet.</Text>
           </View>
         ) : (
-          Object.entries(groupedIngredients).map(([category, items]) => (
-            <View key={category} style={styles.categoryBlock}>
+          <>
+            <TextInput
+              accessibilityLabel="Search ingredients"
+              style={styles.searchInput}
+              placeholder="Search ingredients or categories"
+              placeholderTextColor={colors.muted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+            {Object.keys(groupedIngredients).length === 0 ? (
+              <Text style={styles.noResultsText}>No ingredients match that search.</Text>
+            ) : (
+              Object.entries(groupedIngredients).map(([category, items]) => (
+                <View key={category} style={styles.categoryBlock}>
                   <Text style={styles.categoryLabel}>{category}</Text>
-              <View style={styles.chipList}>
-                {items.map((ingredient) => {
-                  const isSelected = selectedIds.includes(ingredient.id);
-                  return (
-                    <Pressable
-                      key={ingredient.id}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isSelected }}
-                      onPress={() => toggleIngredient(ingredient.id)}
-                      style={[styles.chip, isSelected && styles.chipSelected]}
-                    >
-                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                        {ingredient.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ))
+                  <View style={styles.chipList}>
+                    {items.map((ingredient) => {
+                      const isSelected = selectedIds.includes(ingredient.id);
+                      return (
+                        <Pressable
+                          key={ingredient.id}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: isSelected }}
+                          onPress={() => toggleIngredient(ingredient.id)}
+                          style={[styles.chip, isSelected && styles.chipSelected]}
+                        >
+                          <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                            {isSelected ? '\u2713 ' : ''}{ingredient.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))
+            )}
+          </>
         )}
 
         <Pressable
@@ -196,7 +222,13 @@ export default function App() {
             const isReady = cocktail.matched_count === cocktail.total_required;
             const missingCount = Math.max(0, cocktail.total_required - cocktail.matched_count);
             return (
-            <View key={cocktail.id} style={[styles.recipe, isReady && styles.recipeReady]}>
+            <Pressable
+              key={cocktail.id}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${cocktail.name} recipe`}
+              onPress={() => setSelectedCocktail(cocktail)}
+              style={[styles.recipe, isReady && styles.recipeReady]}
+            >
               {cocktail.image_url ? (
                 <Image source={{ uri: cocktail.image_url }} style={styles.recipeImage} />
               ) : null}
@@ -210,31 +242,66 @@ export default function App() {
                   </View>
                 </View>
                 {cocktail.glassware ? <Text style={styles.glassware}>{cocktail.glassware}</Text> : null}
-                {Array.isArray(cocktail.ingredients) && (
-                  <View style={styles.recipeIngredients}>
-                    {cocktail.ingredients.map((ingredient) => (
-                      <View key={ingredient.id} style={styles.recipeIngredient}>
-                        <Text style={styles.ingredientAmount}>{ingredient.amount}</Text>
-                        <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
                 <Text style={styles.instructions}>{cocktail.instructions}</Text>
-                {cocktail.source_url ? (
-                  <Pressable
-                    accessibilityRole="link"
-                    onPress={() => Linking.openURL(cocktail.source_url).catch(() => {})}
-                  >
-                    <Text style={styles.sourceAttribution}>Recipe data: TheCocktailDB</Text>
-                  </Pressable>
-                ) : null}
               </View>
-            </View>
+            </Pressable>
             );
           })
         )}
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={Boolean(selectedCocktail)}
+        onRequestClose={() => setSelectedCocktail(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedCocktail?.image_url ? (
+              <Image source={{ uri: selectedCocktail.image_url }} style={styles.modalImage} />
+            ) : null}
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>{selectedCocktail?.name}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close recipe"
+                onPress={() => setSelectedCocktail(null)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>X</Text>
+              </Pressable>
+            </View>
+            {selectedCocktail?.glassware ? (
+              <Text style={styles.glassware}>Glassware: {selectedCocktail.glassware}</Text>
+            ) : null}
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalSubheading}>Ingredients required</Text>
+              {(selectedCocktail?.recipe_ingredients || []).map((ingredient) => (
+                <View key={ingredient.id} style={styles.modalIngredientRow}>
+                  <Text style={[styles.modalIngredientName, !ingredient.hasIt && styles.missingIngredient]}>
+                    {ingredient.hasIt ? 'Have' : 'Missing'}: {ingredient.name}
+                  </Text>
+                  <Text style={styles.modalIngredientAmount}>{ingredient.amount || 'Amount not listed'}</Text>
+                </View>
+              ))}
+              <Text style={styles.modalSubheading}>Instructions</Text>
+              <Text style={styles.modalInstructions}>{selectedCocktail?.instructions}</Text>
+              {selectedCocktail?.source_url ? (
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => Linking.openURL(selectedCocktail.source_url).catch(() => {})}
+                >
+                  <Text style={styles.sourceAttribution}>Recipe data: TheCocktailDB</Text>
+                </Pressable>
+              ) : null}
+            </ScrollView>
+            <Pressable style={styles.modalDoneButton} onPress={() => setSelectedCocktail(null)}>
+              <Text style={styles.modalDoneButtonText}>Close recipe</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -251,6 +318,8 @@ const styles = StyleSheet.create({
   inventoryHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 30, marginBottom: 14 },
   sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '700' },
   itemCount: { color: colors.muted, fontSize: 12 },
+  searchInput: { backgroundColor: colors.white, borderColor: colors.line, borderRadius: 8, borderWidth: 1, color: colors.ink, fontSize: 14, marginBottom: 16, minHeight: 46, paddingHorizontal: 14 },
+  noResultsText: { color: colors.muted, fontSize: 14, paddingVertical: 18, textAlign: 'center' },
   categoryBlock: { marginBottom: 17 },
   categoryLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', marginBottom: 9, textTransform: 'uppercase' },
   chipList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -287,4 +356,20 @@ const styles = StyleSheet.create({
   ingredientName: { color: colors.ink, flex: 1, fontSize: 13 },
   instructions: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 12 },
   sourceAttribution: { color: colors.citrus, fontSize: 12, marginTop: 10, textDecorationLine: 'underline' },
+  modalOverlay: { backgroundColor: 'rgba(0, 0, 0, 0.78)', flex: 1, justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.white, borderColor: colors.line, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, maxHeight: '88%', padding: 20 },
+  modalImage: { borderRadius: 8, height: 180, marginBottom: 14, width: '100%' },
+  modalHeaderRow: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  modalTitle: { color: colors.ink, flex: 1, fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }), fontSize: 26 },
+  closeButton: { alignItems: 'center', backgroundColor: colors.line, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
+  closeButtonText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  modalScroll: { marginTop: 8 },
+  modalSubheading: { color: colors.ink, fontSize: 15, fontWeight: '800', marginBottom: 8, marginTop: 14 },
+  modalIngredientRow: { borderBottomColor: colors.line, borderBottomWidth: 1, flexDirection: 'row', gap: 12, justifyContent: 'space-between', paddingVertical: 9 },
+  modalIngredientName: { color: colors.ink, flex: 1, fontSize: 14 },
+  missingIngredient: { color: '#FBBF24' },
+  modalIngredientAmount: { color: colors.citrus, fontSize: 13, fontWeight: '700', textAlign: 'right' },
+  modalInstructions: { color: colors.muted, fontSize: 14, lineHeight: 22, marginBottom: 10 },
+  modalDoneButton: { alignItems: 'center', backgroundColor: colors.citrus, borderRadius: 8, justifyContent: 'center', marginTop: 12, minHeight: 48 },
+  modalDoneButtonText: { color: '#111827', fontSize: 15, fontWeight: '800' },
 });

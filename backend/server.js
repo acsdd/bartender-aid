@@ -42,22 +42,27 @@ app.post('/api/match', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.id, c.name, c.instructions, c.glassware, c.image_url, c.source_url,
-              COUNT(ci.ingredient_id)::int AS total_required,
-              COUNT(ci.ingredient_id)::int AS matched_count,
+              COUNT(*)::int AS total_required,
+              COUNT(*) FILTER (WHERE ci.ingredient_id = ANY($1::int[]))::int AS matched_count,
               json_agg(json_build_object(
                 'id', i.id,
                 'name', i.name,
-                'amount', ci.amount
-              ) ORDER BY i.name) AS ingredients
+                'amount', ci.amount,
+                'hasIt', ci.ingredient_id = ANY($1::int[])
+              ) ORDER BY i.name) AS recipe_ingredients
        FROM cocktails c
        JOIN cocktail_ingredients ci ON ci.cocktail_id = c.id
        JOIN ingredients i ON i.id = ci.ingredient_id
        GROUP BY c.id
-       HAVING COUNT(*) FILTER (WHERE ci.ingredient_id = ANY($1::int[])) = COUNT(*)
-       ORDER BY c.name`,
+       HAVING COUNT(*) FILTER (WHERE ci.ingredient_id = ANY($1::int[])) > 0
+       ORDER BY matched_count DESC, total_required ASC, c.name`,
       [[...new Set(ingredientIds)]]
     );
-    res.json(result.rows);
+    res.json(result.rows.map((cocktail) => ({
+      ...cocktail,
+      isReady: cocktail.matched_count === cocktail.total_required,
+      missingCount: cocktail.total_required - cocktail.matched_count,
+    })));
   } catch (err) {
     console.error('Failed to match cocktails:', err.message);
     res.status(500).json({ error: 'Internal server error' });
