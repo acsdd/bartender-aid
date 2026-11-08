@@ -9,13 +9,14 @@
  *   npm run warm -- 30        # stop after 30 minutes
  *   API_HEALTH_URL=http://192.168.1.50:5000/api/health npm run warm
  *
- * The interval defaults to 10 minutes; override it with
+ * The interval defaults to 4 minutes — just under Neon's 5-minute idle suspend
+ * window — so the database compute stays active too. Override it with
  * KEEPALIVE_INTERVAL_MS (minimum 5000).
  */
 const url =
   process.env.API_HEALTH_URL || 'https://bartender-aid.onrender.com/api/health';
 const minutes = Math.max(0, Number(process.argv[2] || process.env.KEEPALIVE_MINUTES) || 0);
-const intervalMs = Math.max(5000, Number(process.env.KEEPALIVE_INTERVAL_MS) || 10 * 60 * 1000);
+const intervalMs = Math.max(5000, Number(process.env.KEEPALIVE_INTERVAL_MS) || 4 * 60 * 1000);
 const deadline = minutes > 0 ? Date.now() + minutes * 60 * 1000 : Infinity;
 
 let stopped = false;
