@@ -2,6 +2,8 @@
 
 **Status:** `internal_UAT` — under acceptance testing inside the team. ![status](https://img.shields.io/badge/status-internal_UAT-e8c35c?style=flat-square)
 
+**Site:** <https://acsdd.github.io/bartender-aid/> — The project landing page.
+
 Bartender Aid is a cocktail assistant: an Expo phone app backed by a small
 Express service that keeps the recipe library in sync with TheCocktailDB and
 holds the database connection open between requests.
